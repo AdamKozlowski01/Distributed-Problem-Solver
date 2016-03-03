@@ -8,7 +8,8 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -72,15 +73,6 @@ public class AuthenticatingServer {
 		
 	}
 	
-	public void getNewProblem(ProblemModule m){
-		problemModulesToSolve.add(m);
-	}
-	
-	public void distributeWork(){
-		ProblemModule work = problemModulesToSolve.remove(0);
-		//ProblemModule[] breakdown = work.breakDown();
-	}
-	
 	//listen for a new connection from a node
 	public void handleConnection() throws IOException, ClassNotFoundException{ //eventually this needs to be multithreaded
 		Socket node = server.accept();
@@ -95,6 +87,7 @@ public class AuthenticatingServer {
 		if(nodeID == -1L){
 			//handle a new node joining the network
 			System.out.println("New node connected, uniqueID " + handleNewNode(node) + "assigned");
+			//keep alive
 		}else if( nodeWorkStatus.get(nodeID) != null && nodeWorkStatus.get(nodeID) ){ //check if we have a pending job for them
 			//handle getting a job back solved
 			System.out.println("Getting solution back from: " + handleAnswerReturned(nodeID));
@@ -102,6 +95,7 @@ public class AuthenticatingServer {
 			//handle an already ID'd client be available for work
 			if(nodeConnectionStatus.get(nodeID) != null && !nodeConnectionStatus.get(nodeID)){
 				System.out.println("New node connected: "+handleNodeReconnect(node, nodeID));
+				//keep alive
 			}else{ //or remove that client from the list of available clients
 				System.out.println("Node disconnecting: "+handleNodeDisconnect(nodeID));
 			}
@@ -143,6 +137,35 @@ public class AuthenticatingServer {
 	}
 	
 	//handle getting a job from the user and distributing it
+	public void getNewProblem(ProblemModule m){
+		problemModulesToSolve.add(m);
+	}
+	
+	public void distributeWork() throws IOException{
+		//check if there are enough nodes to solve a problem. Minimum 2.
+		ProblemModule work = problemModulesToSolve.remove(0);
+		ProblemModule[] breakdown = work.breakDown(10); //change to the total number of available nodes
+		for(ProblemModule m : breakdown){
+			problemModuleBrokenDown.add(m);
+			//send the work to individual nodes
+			Iterator it = nodeConnectionStatus.entrySet().iterator();
+			while(it.hasNext()){
+				Map.Entry pair = (Map.Entry)it.next();
+				if((boolean) pair.getValue() && !nodeWorkStatus.get(pair.getKey())){
+					//send work
+					objectOut.writeObject(m);
+					nodeWorkStatus.replace((Long) pair.getKey(), true);
+					nodeInfo.get(pair.getKey()).close();
+					break;
+				}
+			//get a list of the hashmap's entries.
+			//check if the current one is busy
+			//if it's not busy send that one work
+			//set the node's work flag to on
+			//store any other info about the node's work that we need to.
+			}
+		}
+	}
 	
 	//handle getting a job back solved
 	public long handleAnswerReturned(Long id) throws ClassNotFoundException, IOException{
