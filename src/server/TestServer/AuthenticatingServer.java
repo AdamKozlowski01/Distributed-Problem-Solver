@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import problemModule.HardcodedTestProblem;
 import problemModule.ProblemModule;
 import problemModule.TestProblemModule;
 
@@ -110,18 +111,18 @@ public class AuthenticatingServer {
 		//assign a unique ID
 		boolean idIsGood = false;
 		long randomID = 0;
+		Random r = new Random();
 		while(!idIsGood){
 			
 			//generate a random number
-			Random r = new Random();
-			r.nextLong();
+			randomID = r.nextLong();
 			
 			if(nodeIDTaken.get(randomID) == null)
 				idIsGood = true;
 			else if(randomID-1 > 0)
 				randomID--;
 			else
-				r.nextLong();
+				randomID = r.nextLong();
 				//generate a new random number
 		}
 		
@@ -179,7 +180,7 @@ public class AuthenticatingServer {
 		if(problemModuleSolved.size() == problemModuleBrokenDown.size())
 		{
 			ProblemModule[] solvedArray = (ProblemModule[]) problemModuleSolved.toArray();
-			ProblemModule answer = new TestProblemModule(); //for testing only
+			ProblemModule answer = new HardcodedTestProblem(); //for testing only
 			answer.finalize(solvedArray);
 		}
 		
