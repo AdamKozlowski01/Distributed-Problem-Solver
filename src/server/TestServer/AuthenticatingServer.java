@@ -71,7 +71,9 @@ public class AuthenticatingServer {
 		nodeWorkStatus = new ConcurrentHashMap<Long, Boolean>();
 		nodeConnectionStatus = new ConcurrentHashMap<Long, Boolean>();
 		nodeIDTaken = new ConcurrentHashMap<Long, Boolean>();
-		
+		problemModulesToSolve = new ArrayList<ProblemModule>();
+		problemModuleBrokenDown = new ArrayList<ProblemModule>();
+		problemModuleSolved = new ArrayList<ProblemModule>();
 	}
 	
 	//listen for a new connection from a node
@@ -82,7 +84,8 @@ public class AuthenticatingServer {
 		output = new DataOutputStream(node.getOutputStream());
 		objectOut = new ObjectOutputStream(output);
 		
-		String idAsString = input.readUTF();
+		String idAsString;
+		idAsString = input.readUTF();
 		Long nodeID = Long.parseLong(idAsString);
 		
 		if(nodeID == -1L){
@@ -144,26 +147,31 @@ public class AuthenticatingServer {
 	
 	public void distributeWork() throws IOException{
 		//check if there are enough nodes to solve a problem. Minimum 2.
-		ProblemModule work = problemModulesToSolve.remove(0);
-		ProblemModule[] breakdown = work.breakDown(10); //change to the total number of available nodes
-		for(ProblemModule m : breakdown){
-			problemModuleBrokenDown.add(m);
-			//send the work to individual nodes
-			Iterator it = nodeConnectionStatus.entrySet().iterator();
-			while(it.hasNext()){
-				Map.Entry pair = (Map.Entry)it.next();
-				if((boolean) pair.getValue() && !nodeWorkStatus.get(pair.getKey())){
-					//send work
-					objectOut.writeObject(m);
-					nodeWorkStatus.replace((Long) pair.getKey(), true);
-					nodeInfo.get(pair.getKey()).close();
-					break;
+		if(problemModulesToSolve.size() > 0){
+			ProblemModule work = problemModulesToSolve.remove(0);
+			ProblemModule[] breakdown = work.breakDown(10); //change to the total number of available nodes
+			for(ProblemModule m : breakdown){
+				problemModuleBrokenDown.add(m);
+				//send the work to individual nodes
+				Iterator it = nodeConnectionStatus.entrySet().iterator();
+				while(it.hasNext()){
+					Map.Entry pair = (Map.Entry)it.next();
+					if((boolean) pair.getValue() && !nodeWorkStatus.get(pair.getKey())){
+						//send work
+						objectOut.writeObject(m);
+						nodeWorkStatus.replace((Long) pair.getKey(), true);
+						nodeInfo.get(pair.getKey()).close();
+						break;
+					}
+					//get a list of the hashmap's entries.
+					//check if the current one is busy
+					//if it's not busy send that one work
+					//set the node's work flag to on
+					//store any other info about the node's work that we need to.
+					
+					//put a queue here so that future nodes that connect can be given work immediately (FOR THE FUTURE)
 				}
-			//get a list of the hashmap's entries.
-			//check if the current one is busy
-			//if it's not busy send that one work
-			//set the node's work flag to on
-			//store any other info about the node's work that we need to.
+		
 			}
 		}
 	}
