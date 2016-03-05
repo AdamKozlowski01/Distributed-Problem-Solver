@@ -50,20 +50,16 @@ public class DenialOfService implements ProblemModule {
 	 */
 	@Override
 	public ProblemModule[] breakDown(Integer nodes) {
-		ProblemModule[] distributed = new ProblemModule[nodes];
+		ProblemModule[] distributed = null;
 		
-		if(nodes > 0) {		// input validation to make sure number of nodes isn't negative
-			if(nodes > 1) {	// more than one node
-				for(int i = 1; i <= nodes; i++) {
-					distributed[i] = new DenialOfService(numAttempts, hostName, portNumber, i);
-				}
-			}
-			else {			// just one node
-				distributed[0] = new DenialOfService(numAttempts, hostName, portNumber, 1);
+		if(nodes > 0) {		// input validation to make sure number of nodes isn't negative or zero
+			for(int i = 0; i < nodes; i++) {
+				distributed = new ProblemModule[nodes];
+				distributed[i] = new DenialOfService(numAttempts, hostName, portNumber, i + 1);
 			}
 		}
 		
-		return distributed;
+		return distributed;	// returns null if there is an error
 	}
 
 	/*
