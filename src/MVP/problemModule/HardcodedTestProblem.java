@@ -17,7 +17,7 @@ public class HardcodedTestProblem implements MVP.problemModule.ProblemModule{
 	Integer M = 3;
 	private boolean GPUReady=false;
 	
-
+	//TODO: update breakdown and finalize to utalize multiple nodes.
 	public HardcodedTestProblem(){}
 	
 	@Override

@@ -22,6 +22,8 @@ import MVP.problemModule.ProblemModule;
 //and it will keep all the nodes busy if each problem management thread gets the proper number of nodes returned.
 
 
+//TODO: Improvements to this class. Need to test with a problem module with a proper breakdown and finalize method.
+
 public class MultiThreadedServerConnectionManager implements MVP.Server.ServerConnectionManager,Runnable {
 
 	private static ExecutorService MTSE = Executors.newFixedThreadPool(40);
