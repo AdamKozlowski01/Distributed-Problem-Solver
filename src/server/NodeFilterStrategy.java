@@ -7,7 +7,7 @@ public interface NodeFilterStrategy {
 	//some problems may not need or benefit from breakdown AND GPU acceleration and some may almost certainly require it like rendering.
 	//GPU solver is a Future/Stretch Goal so it need not be implemented currently.
 	
-	//public getNodes();
+	//public Node[] getNodes();
 	
 	
 }

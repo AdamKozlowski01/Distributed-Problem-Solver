@@ -1,5 +1,5 @@
 package server.TestServer;
-
+/*
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -9,11 +9,12 @@ import java.util.concurrent.Executors;
 
 import server.ServerConnectionManager;
 import server.ServerConnectionImpl.MultiThreadedServerConnectionManager;
-
+*/
+//Temporarily Unsupported
 public class ModularTestServer {
-
+/*
 	private static String Host;
-	private static int Port;
+	private static int CPort,NPort;
 	private static ServerConnectionManager SCM;
 	private static SingleThreadServerConnectionManager STSCM;
 	private static Executor ConnectionServicer = Executors.newCachedThreadPool();
@@ -25,17 +26,12 @@ public class ModularTestServer {
 	}
 	
 	public ModularTestServer(int port){
-		Port = port;
+
 	}
 	
 	public void DefaultTestServer(int port) throws IOException{
-		Server = new ServerSocket(Port);
-		SCM = new MultiThreadedServerConnectionManager(Port);	
+		SCM = new MultiThreadedServerConnectionManager(CPort,Nport);	
 		Running = true;
-		while(Running){
-			Socket newCon = Server.accept();
-			ConnectionServicer.execute(SCM.newCon(newCon));
-		}
 	}
 	
 	public void Shutdown() throws IOException{
@@ -79,5 +75,5 @@ public class ModularTestServer {
 	public static void setRunning(boolean running) {
 		Running = running;
 	}
-	
+	*/
 }

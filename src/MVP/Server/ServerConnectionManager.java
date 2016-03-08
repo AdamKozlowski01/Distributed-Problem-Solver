@@ -1,4 +1,4 @@
-package server;
+package MVP.Server;
 
 import java.io.IOException;
 

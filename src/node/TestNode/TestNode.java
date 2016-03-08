@@ -41,6 +41,8 @@ public class TestNode implements NodeType {
 		DataIn = new DataInputStream(Node.getInputStream());
 		
 		obIn = new ObjectInputStream(DataIn);
+		
+	
 		long newid;
 		
 		File file= new File("id.txt");
@@ -63,10 +65,8 @@ public class TestNode implements NodeType {
 			//convert long to string
 			writer.write(newIdString);
 			//write to file for future reference
-
-
 		}
-
+	
 		
 		ExecutorService Solver = Executors.newCachedThreadPool();
 		
@@ -75,7 +75,7 @@ public class TestNode implements NodeType {
 		Future<Object> rec = null;
 	
 		Future<ProblemModule> PM = null;
-		InputService IS = new InputService(obIn);
+		//InputService IS = new InputService(obIn);
 		rec = Solver.submit(new InputService(obIn));
  		while(Ready){
 			if(rec.isCancelled()){
@@ -104,6 +104,13 @@ public class TestNode implements NodeType {
 			Thread.sleep(3000);
 			}
 		}
+ 		obOut.writeObject(new common.Status(Status));
+ 		Node.close();
+	}
+	
+	public void Shutdown(){
+		Status = 0;
+		Ready = false;
 	}
 
 	public TestNode(String host, int port) {
@@ -149,7 +156,7 @@ class SolverService implements Callable<ProblemModule>{
 
 	@Override
 	public ProblemModule call() throws Exception {
-		PM.DelaySolve();
+		PM.Solve();
 		return PM;
 	}
 }

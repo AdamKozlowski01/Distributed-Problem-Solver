@@ -1,8 +1,8 @@
-package problemModule;
+package MVP.problemModule;
 
 import java.util.Arrays;
 
-public class HardcodedTestProblem implements ProblemModule{
+public class HardcodedTestProblem implements MVP.problemModule.ProblemModule{
 
 	
 	private static final long serialVersionUID = 1L;
@@ -25,6 +25,7 @@ public class HardcodedTestProblem implements ProblemModule{
 		//int used = Math.floorDiv(nodes, 2);
 		int used = 1;
 		ProblemModule[] subprobs = new ProblemModule[used];
+		subprobs[0] = this;
 		return subprobs;
 	}
 	
@@ -155,4 +156,5 @@ public class HardcodedTestProblem implements ProblemModule{
 	public void setSubCount(Integer subCount) {
 		SubCount = subCount;
 	}
+
 }

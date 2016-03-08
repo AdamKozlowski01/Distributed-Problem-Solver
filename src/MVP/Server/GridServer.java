@@ -1,7 +1,7 @@
-package server;
+package MVP.Server;
 
 import java.io.IOException;
-import server.ServerConnectionImpl.MultiThreadedServerConnectionManager;
+import MVP.Server.MultiThreadedServerConnectionManager;
 
 public class GridServer{
 
