@@ -63,7 +63,10 @@ public class TestNode implements NodeType {
 			FileWriter writer = new FileWriter(file);
 			String newIdString = newId+"";
 			//convert long to string
+			
+			System.out.println(newIdString);
 			writer.write(newIdString);
+			writer.close();
 			//write to file for future reference
 		}
 	
