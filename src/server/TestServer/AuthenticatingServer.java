@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,6 +13,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import problemModule.HardcodedTestProblem;
 import problemModule.ProblemModule;
@@ -47,21 +50,21 @@ import problemModule.TestProblemModule;
 
 public class AuthenticatingServer {
 
-	private ConcurrentHashMap<Long, Socket> nodeInfo;
-	private ConcurrentHashMap<Long, Boolean> nodeWorkStatus;
-	private ConcurrentHashMap<Long, Boolean> nodeConnectionStatus;
-	private ConcurrentHashMap<Long, Boolean> nodeIDTaken;
+	private static ExecutorService executorService = Executors.newFixedThreadPool(20);
+	
+	public ConcurrentHashMap<Long, Socket>  nodeInfo;
+	public ConcurrentHashMap<Long, Boolean> nodeWorkStatus;
+	public ConcurrentHashMap<Long, Boolean> nodeConnectionStatus;
+	public ConcurrentHashMap<Long, Boolean> nodeIDTaken;
+	public ConcurrentHashMap<Long, InetAddress> nodeAddress;
 	
 	//keep track of ProblemModule pieces
 	private ArrayList<ProblemModule> problemModulesToSolve;
-	private ArrayList<ProblemModule> problemModuleBrokenDown;
-	private ArrayList<ProblemModule> problemModuleSolved;
+	public ArrayList<ProblemModule> problemModuleBrokenDown;
+	public ArrayList<ProblemModule> problemModuleSolved;
 	
 	private static ServerSocket server;
 	private static int port;
-	private DataInputStream input;
-	private ObjectInputStream objectIn;
-	private DataOutputStream output;
 	private ObjectOutputStream objectOut;
 	
 	public AuthenticatingServer(int port) throws IOException{
@@ -79,65 +82,7 @@ public class AuthenticatingServer {
 	//listen for a new connection from a node
 	public void handleConnection() throws IOException, ClassNotFoundException{ //eventually this needs to be multithreaded
 		Socket node = server.accept();
-		input = new DataInputStream(node.getInputStream());
-		objectIn = new ObjectInputStream(input);
-		output = new DataOutputStream(node.getOutputStream());
-		objectOut = new ObjectOutputStream(output);
-		
-		String idAsString;
-		idAsString = input.readUTF();
-		Long nodeID = Long.parseLong(idAsString);
-		
-		if(nodeID == -1L){
-			//handle a new node joining the network
-			System.out.println("New node connected, uniqueID " + handleNewNode(node) + "assigned");
-			//keep alive
-		}else if( nodeWorkStatus.get(nodeID) != null && nodeWorkStatus.get(nodeID) ){ //check if we have a pending job for them
-			//handle getting a job back solved
-			System.out.println("Getting solution back from: " + handleAnswerReturned(nodeID));
-		}else{
-			//handle an already ID'd client be available for work
-			if(nodeConnectionStatus.get(nodeID) != null && !nodeConnectionStatus.get(nodeID)){
-				System.out.println("New node connected: "+handleNodeReconnect(node, nodeID));
-				//keep alive
-			}else{ //or remove that client from the list of available clients
-				System.out.println("Node disconnecting: "+handleNodeDisconnect(nodeID));
-			}
-			
-		}
-		
-	}
-	
-	//handle a new node joining the network
-	public long handleNewNode(Socket node) throws IOException{
-		
-		//assign a unique ID
-		boolean idIsGood = false;
-		long randomID = 0;
-		Random r = new Random();
-		while(!idIsGood){
-			
-			//generate a random number
-			randomID = r.nextLong();
-			
-			if(nodeIDTaken.get(randomID) == null)
-				idIsGood = true;
-			else if(randomID-1 > 0)
-				randomID--;
-			else
-				randomID = r.nextLong();
-				//generate a new random number
-		}
-		
-		nodeInfo.put(randomID, node);
-		nodeConnectionStatus.put(randomID, true);
-		nodeWorkStatus.put(randomID, false);
-		nodeIDTaken.put(randomID, true);
-		
-		output.writeLong(randomID);
-		
-		return randomID;
-		
+		executorService.execute(new HandleNodeConnection(this, node));
 	}
 	
 	//handle getting a job from the user and distributing it
@@ -175,19 +120,61 @@ public class AuthenticatingServer {
 			}
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------------------------
+class HandleNodeConnection implements Runnable{
+
+	//needs a pointer to all of the Concurrent hashtables in the main server so this class can edit them
+	
+
+	private AuthenticatingServer s;
+	private DataInputStream input;
+	private ObjectInputStream objectIn;
+	private DataOutputStream output;
+	private ObjectOutputStream objectOut;
+	private Socket node;
+	
+	HandleNodeConnection(AuthenticatingServer s, Socket node){
+		this.s = s;
+		this.node = node;
+	}
+	
+	
+	private Long handleNodeReconnect(Socket node, Long id){
+		
+		s.nodeConnectionStatus.replace(id, true);
+		s.nodeWorkStatus.replace(id, false);
+		s.nodeInfo.replace(id, node);
+		
+		return id;
+	}
+	
+	private Long handleNodeDisconnect(Long id) throws IOException{
+		
+		s.nodeConnectionStatus.replace(id, false);
+		s.nodeWorkStatus.replace(id, false);
+		
+		input.close();
+		output.close();
+		s.nodeInfo.get(id).close();
+		s.nodeInfo.replace(id, null);
+		
+		return id;
+	}
 	
 	//handle getting a job back solved
-	public long handleAnswerReturned(Long id) throws ClassNotFoundException, IOException{
+	private long handleAnswerReturned(Long id) throws ClassNotFoundException, IOException{
 		
 		ProblemModule solvedProblem = (ProblemModule) objectIn.readObject();
 		
-		nodeWorkStatus.replace(id, false);
+		s.nodeWorkStatus.replace(id, false);
 		
-		problemModuleSolved.add(solvedProblem);
+		s.problemModuleSolved.add(solvedProblem);
 		//sort the problemModuleSolved so our answers are in the right order
-		if(problemModuleSolved.size() == problemModuleBrokenDown.size())
+		if(s.problemModuleSolved.size() == s.problemModuleBrokenDown.size())
 		{
-			ProblemModule[] solvedArray = (ProblemModule[]) problemModuleSolved.toArray();
+			ProblemModule[] solvedArray = (ProblemModule[]) s.problemModuleSolved.toArray();
 			ProblemModule answer = new HardcodedTestProblem(); //for testing only
 			answer.finalize(solvedArray);
 		}
@@ -196,30 +183,70 @@ public class AuthenticatingServer {
 		
 	}
 	
+	private long handleNewNode(Socket node) throws IOException{
+		
+		//assign a unique ID
+		boolean idIsGood = false;
+		long randomID = 0;
+		Random r = new Random();
+		while(!idIsGood){
+			
+			//generate a random number
+			randomID = r.nextLong();
+			
+			if(s.nodeIDTaken.get(randomID) == null)
+				idIsGood = true;
+			else if(randomID-1 > 0)
+				randomID--;
+			else
+				randomID = r.nextLong();
+				//generate a new random number
+		}
+		
+		s.nodeInfo.put(randomID, node);
+		s.nodeConnectionStatus.put(randomID, true);
+		s.nodeWorkStatus.put(randomID, false);
+		s.nodeIDTaken.put(randomID, true);
+		
+		output.writeLong(randomID);
+		
+		return randomID;
+	}
+	
 	//handle a node leaving the network
-	public Long handleNodeDisconnect(Long id) throws IOException{
+	@Override
+	public void run() {
 		
-		nodeConnectionStatus.replace(id, false);
-		nodeWorkStatus.replace(id, false);
+		try{
+			input = new DataInputStream(node.getInputStream());
+			objectIn = new ObjectInputStream(input);
+			output = new DataOutputStream(node.getOutputStream());
+			objectOut = new ObjectOutputStream(output);
 		
-		input.close();
-		output.close();
-		nodeInfo.get(id).close();
-		nodeInfo.replace(id, null);
+			String idAsString;
+			idAsString = input.readUTF();
+			Long nodeID = Long.parseLong(idAsString);
 		
-		return id;
+			if(nodeID == -1L){
+				//handle a new node joining the network
+				System.out.println("New node connected, uniqueID " + handleNewNode(node) + " assigned");
+				//keep alive
+				}else if( s.nodeWorkStatus.get(nodeID) != null && s.nodeWorkStatus.get(nodeID) ){ //check if we have a pending job for them
+				//handle getting a job back solved
+				System.out.println("Getting solution back from: " + handleAnswerReturned(nodeID));
+			}else{
+				//handle an already ID'd client be available for work
+				if(s.nodeConnectionStatus.get(nodeID) != null && !s.nodeConnectionStatus.get(nodeID)){
+					System.out.println("New node connected: "+handleNodeReconnect(node, nodeID));
+					//keep alive
+				}else{ //or remove that client from the list of available clients
+					System.out.println("Node disconnecting: "+handleNodeDisconnect(nodeID));
+				}
+	
+			}
+		}catch(Exception e){
+			
+		}
 	}
-	
-	//handle a node joining the network
-	public Long handleNodeReconnect(Socket node, Long id){
-		
-		nodeConnectionStatus.replace(id, true);
-		nodeWorkStatus.replace(id, false);
-		nodeInfo.replace(id, node);
-		
-		return id;
-	}
-	
-	
 	
 }
