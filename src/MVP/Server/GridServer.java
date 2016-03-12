@@ -1,6 +1,8 @@
 package MVP.Server;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
+
 import MVP.Server.MultiThreadedServerConnectionManager;
 
 public class GridServer{
@@ -34,7 +36,7 @@ public class GridServer{
 		PThreads = i;
 	}
 
-	public void Shutdown(){
+	public void Shutdown() throws UnknownHostException, IOException{
 		SCM.shutdown();
 	}
 }

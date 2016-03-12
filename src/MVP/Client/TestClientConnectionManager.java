@@ -22,12 +22,12 @@ public class TestClientConnectionManager implements MVP.Client.SingleThreadClien
 
 	public TestClientConnectionManager(String host,int port) throws UnknownHostException, IOException{
 		Client = new Socket(InetAddress.getByName(null),9090);
-		System.out.println("Connected");
+		System.out.println("ClientSays: Connected");
 		DataOut = new DataOutputStream(Client.getOutputStream());
 		obOut = new ObjectOutputStream(DataOut);
 		DataIn = new DataInputStream(Client.getInputStream());
 		obIn = new ObjectInputStream(DataIn);
-		System.out.println("Streams setup");
+		System.out.println("ClientSays: Streams setup");
 	}
 
 	public Object readObject() throws ClassNotFoundException, IOException {return obIn.readObject();}
@@ -49,7 +49,7 @@ public class TestClientConnectionManager implements MVP.Client.SingleThreadClien
 				waiting = false;
 			}else if(recv instanceof Packets){
 				if((recv instanceof KeepAlive)){
-					System.out.println("Currently in Posistion "+ ((KeepAlive) recv).getPos());
+					//System.out.println("Currently in Posistion "+ ((KeepAlive) recv).getPos());
 				}
 			}
 		}

@@ -5,8 +5,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,8 +33,9 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 	ClientListener CL;
 	NodeListener NL;
 	ProblemServicer PS;
+	private static ArrayList<Node> PS1 = new ArrayList<Node>();
 	private static ConcurrentHashMap<ProblemModule,Client> Clients = new ConcurrentHashMap<ProblemModule,Client>();
-	private static ConcurrentHashMap<Node,Node> Nodes = new ConcurrentHashMap<Node,Node>();
+	private static ConcurrentHashMap<Integer,Node> Nodes = new ConcurrentHashMap<Integer,Node>();
 	private static final BlockingQueue<ProblemModule> Tasks = new LinkedBlockingQueue<ProblemModule>(); 
 
 	//private NodeFilterStrategy Filter = new AllAvailable();
@@ -50,21 +53,21 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 	public synchronized void addClient(Client c){
 		Clients.put(c.getProblem(), c);
 		Tasks.add(c.getProblem());
-		System.out.println("ServerSays: Client and Task Added");
+		//System.out.println("ServerSays: Client and Task Added");
 	}
 
 	public synchronized void addNode(Node n){
-		System.out.println("adding Node");
-		Nodes.put(n,n);
+		System.out.println("adding Node " + n.getSocket());
+		getNodes().put(n.getSocket().getLocalPort(),n);
+		//Nodes.add(n);
 	}
-	
-	public void returnTask(ProblemModule Task){
-		
-	}
+
+	//TODO: public void returnTask(ProblemModule Task){}
 
 	public synchronized void submitTask(Runnable R){
 		MTSE.execute(R);
 	}
+
 	@Override
 	public void StartServer() throws IOException{
 		CL = new ClientListener(CPort,this);
@@ -76,53 +79,67 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 	}
 
 	@Override
-	public void setCPort(int P){
-		CPort = P;
-	}
+	public void setCPort(int P){CPort = P;}
 
 	@Override
-	public void setNPort(int P){
-		NPort = P;
-	}	
+	public void setNPort(int P){NPort = P;}	
 
 	public Client getTaskfromQueue() throws InterruptedException{
-		ProblemModule Task = Tasks.take();
-		System.out.println("ServerSays: getting task from queue");
+		ProblemModule Task = Tasks.take(); //is a synchronized operation.
+		//System.out.println("ServerSays: getting task from queue");
 		return Clients.get(Task);
 	}
-	
-	//this is where the filter strategy would go.
+
+	//this is where the call to the filter strategy would go.
 	public synchronized ArrayList<Node> ScheduleNodes(ProblemModule task) throws IOException{
-		System.out.println("ServerSays: SchedulingNodes");
+		//System.out.println("ServerSays: SchedulingNodes");
 		ArrayList<Node> ReadyNodes = new ArrayList<Node>();
-		 for(Node i :Nodes.keySet()){
-			 if(i.getStatus() == 0 && !i.isScheduled()){
-				 ReadyNodes.add(i);
-			 }	 
-		 }
+		for(Integer i : getNodes().keySet()){
+			Node N = Nodes.get(i);
+			if(N.getStatus() == 1 && !N.isScheduled()){
+				//	System.out.println(N + " being added to readyNodes");
+				ReadyNodes.add(N);
+			}	 
+		}
 		ProblemModule[] subTasks = task.breakDown(ReadyNodes.size());
+		//System.out.println("number of ready nodes: " + ReadyNodes.size());
 		ArrayList<Node> ScheduledNodes = new ArrayList<Node>();
-		for(int i = 0; i<subTasks.length ;i++){
-			Node n = Nodes.get(ReadyNodes.get(i));
+		for(int i = 0; i<subTasks.length; i++){
+			Node n = ReadyNodes.get(i);
+			System.out.println("node " + n.getSocket() + " added to scheduled nodes");
 			n.setScheduled(true);
 			n.sendTask(subTasks[i]);
 			ScheduledNodes.add(n);
+			System.out.println( "Sending to socket " + ScheduledNodes.get(i).getSocket());
 		}
-		System.out.println("ServerSays: SchedulingNodes Complete");
+		System.out.println("ServerSays: Scheduling Nodes Complete");
+		PS1.addAll(ScheduledNodes);
+		//System.out.println("PS1 socket = " + PS1.get(0).getSocket());
 		return ScheduledNodes;
 	}
 
 	@Override
 	public void run() {
 		//MTSE.submit(task)
-
 	}
 
 	@Override
-	public void shutdown() {
+	public void shutdown() throws UnknownHostException, IOException {
 		CL.Shutdown();
 		NL.Shutdown();
 	}
+
+	public ConcurrentHashMap<Integer,Node> getNodes() {return Nodes;}
+
+	/*public boolean getTaskReady(Socket n){
+		//System.out.println("Checking socket + " + n);
+		return Nodes.get(n).problemReady();
+	}*/
+	
+	public boolean getTaskReady(Node n){
+		return Nodes.get(n.getSocket().getLocalPort()).problemReady();
+	}
+
 }
 
 class ClientListener implements Runnable{
@@ -140,20 +157,23 @@ class ClientListener implements Runnable{
 	@Override
 	public void run() {
 		System.out.println("ClientListener Running on Port: " + CPort);
+		Socket[] clients = new Socket[100];
 		while(running){
 			try {
 				System.out.println("ClientListener Waiting for Connection " + CPort);
-				Socket client = ClientListener.accept();
-				System.out.println("ClientConnected");
-				Parent.submitTask(new Client(client,Parent));
-			} catch (IOException e) {e.printStackTrace();}	
+				for(int i = 0; i<100; i++){
+					clients[i] = ClientListener.accept();
+					System.out.println("ClientConnected");
+					Parent.submitTask(new Client(clients[i],Parent));
+				}
+			} catch (IOException e) {System.out.println("Client Listener Closed");}	
 		}
-		try {
-			ClientListener.close();
-		} catch (IOException e) {e.printStackTrace();}
 	}
 
-	public void Shutdown(){running = false;}
+	public void Shutdown() throws IOException{
+		running = false;
+		ClientListener.close();
+	}
 
 }
 class NodeListener implements Runnable{
@@ -172,21 +192,26 @@ class NodeListener implements Runnable{
 	@Override
 	public void run() {
 		System.out.println("NodeListener Running on Port: " + NPort);
+		Socket[] nodes = new Socket[100];
 		while(running){
 			try {
 				System.out.println("NodeListener Waiting for Connection: ");
-				Socket node = NodeListener.accept();
-				System.out.println("NodeConnected");
-				Parent.submitTask(new Node(node,Parent));
-			} catch (IOException e) {e.printStackTrace();}	
+				for(int i = 0; i<100; i++){
+					nodes[i] = NodeListener.accept();
+					//Socket node = NodeListener.accept();
+					System.out.println("NodeConnected");
+					Parent.submitTask(new Node(nodes[i],Parent));
+				}
+			} catch (IOException e) {
+				System.out.println("nodeListener Closed");
+			}	
 		}
-		try {
-			NodeListener.close();
-		} catch (IOException e) {e.printStackTrace();}
 	}
-	
-	public void Shutdown(){running = false;}
-	
+
+	public void Shutdown() throws IOException{
+		running = false;
+		NodeListener.close();
+	}
 }
 
 
@@ -255,40 +280,64 @@ class Node implements Runnable{
 	private MultiThreadedServerConnectionManager Parent;
 	private int status;
 	private ProblemModule Task;
-	private boolean TaskComplete,scheduled;
+	private Boolean TaskComplete,scheduled;
 
+	
+	@Override
+	public int hashCode(){
+		   int hashcode = 5;
+		   hashcode = 89*hashcode + (this.DataOut.hashCode());
+		   hashcode = 89*hashcode + (this.DataIn.hashCode());
+		   hashcode = 89*hashcode + (this.getSocket().hashCode());
+		   return hashcode;
+	}
+	
+	@Override
+	public boolean equals(Object obj){
+		if(this == obj) return true;
+		if(obj == null || this.getClass() != obj.getClass()) return false;
+		if(this.getSocket() == ((Node) obj).getSocket());
+		return true;
+	}
+	
 	private void setupStreams() throws IOException{
 		DataOut = new DataOutputStream(Node.getOutputStream());
 		obOut = new ObjectOutputStream(DataOut);
 		DataIn = new DataInputStream(Node.getInputStream());
 		obIn = new ObjectInputStream(DataIn);
+		hashCode();
 	}
-	
+
 	public Node(Socket node, MultiThreadedServerConnectionManager parent) throws IOException {
 		Node = node;
 		Parent = parent;
+		scheduled = new Boolean(false);
+		TaskComplete = new Boolean(false);
 	}
 
 	public Socket getSocket() {return Node;}
-	
+
+
 	public void sendTask(ProblemModule task) throws IOException{
 		Task = task;
 		TaskComplete = false;
 		obOut.writeObject(Task);
 	}
-	
+
 	public ProblemModule retrieveTask(){
+		System.out.println("ServerSays: ProblemModule collected from node" + this);
 		ProblemModule returnMod = Task;
 		Task = null;
 		TaskComplete= false;
 		setScheduled(false);
 		return returnMod;	
 	}
-	
+
 	public boolean problemReady(){
+		System.out.println("Nodes problemReady() " + this.getSocket() + " Problem ready = " + TaskComplete);
 		return TaskComplete;
 	}
-	
+
 	public int getStatus(){
 		return status;
 	}
@@ -298,21 +347,23 @@ class Node implements Runnable{
 		try {
 			setupStreams();
 			Parent.addNode(this);
-			
-			while(Node.isConnected() && !Node.isClosed()){		
+			while(Node.isConnected() && !Node.isClosed()){	
+				if(this.isScheduled()){System.out.println(this + "TaskComplete = " + TaskComplete);}
 				Object RecievedObj = obIn.readObject();
-				System.out.println("ServerSays: Object Recieved from node");
-					if((RecievedObj) instanceof ProblemModule){
-						Task = (ProblemModule) RecievedObj;
-						TaskComplete = true;
-						System.out.println("ServerSays: PM recieved from node");
-					}else if(RecievedObj instanceof Packets){
-						if((RecievedObj instanceof Status)){
-							status = ((Status) RecievedObj).getStatus();
-							System.out.println("ServerSays: Node status " + status);
-						}
+				//System.out.println("ServerSays: Object Recieved from node" + this);
+				if((RecievedObj) instanceof ProblemModule){
+					Task = (ProblemModule) RecievedObj;
+					TaskComplete = true;
+					System.out.println("ServerSays: PM returned from node " + this.getSocket());
+					//System.out.println("ServerSays: node internal call to Parent.getTaskReady(this) returns " + Parent.getTaskReady(this));
+
+				}else if(RecievedObj instanceof Packets){
+					if((RecievedObj instanceof Status)){
+						status = ((Status) RecievedObj).getStatus();
+						System.out.println("ServerSays: Node" + this.getSocket() +" status " + status);
 					}
 				}
+			}
 			status = 0;
 			Node.close();
 		}
@@ -320,93 +371,79 @@ class Node implements Runnable{
 		catch (ClassNotFoundException e) {e.printStackTrace();}
 	}
 
-	public boolean isScheduled() {
-		return scheduled;
-	}
+	public boolean isScheduled() {return scheduled;}
 
-	public void setScheduled(boolean scheduled) {
-		this.scheduled = scheduled;
-	}
+	public void setScheduled(boolean scheduled) {this.scheduled = scheduled;}
 }
 
 
 //TODO: finish ProblemServicer
 
 class ProblemServicer implements Runnable{
-	
+
 	private MultiThreadedServerConnectionManager Parent;
 	private boolean running = true;
 	private ProblemModule Task;
 	private Client C;
 	private ArrayList<Node> workers;
 	private ProblemModule[] subTasks;
+
+
 	public ProblemServicer(MultiThreadedServerConnectionManager mtscm){
 		System.out.println("Problem Servicer Started");
 		Parent = mtscm;
 		workers = new ArrayList<Node>();
 	}
-	
+
 	private boolean allReady(){
-		for(Node n: workers){
-			if(n.problemReady()){
-				System.out.println("All Ready");
-				return true;
+		for(int i=0; i<workers.size();i++){
+		//if(!Parent.getTaskReady(workers.get(i))){
+			if(!workers.get(i).problemReady()){
+				System.out.println("allReady says Node " + workers.get(i) + " not ready");
+				return false;
 			}
 		}
-		return false;
+		return true;
 	}
-	
+
 	@Override
 	public void run() {
-	 while(running){
-		 try {
+		while(running){
+			try{
 			System.out.println("getting Task from queue");
 			C = Parent.getTaskfromQueue();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		 
-		 Task = C.getProblem();
-		 try {
+			Task = C.getProblem();
 			workers = Parent.ScheduleNodes(Task);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		 System.out.println("Creating subTask");
-		 subTasks = new ProblemModule[workers.size()];
-		 for(int i = 0; i<workers.size();i++){
-			 try {
-				workers.get(i).sendTask(subTasks[i]);
-			} catch (IOException e) {e.printStackTrace();}
-		 }
-		 while(!allReady()){
-			 try {
-				Thread.sleep(3000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+
+			//Parent.ScheduleNodes(Task);
+			//workers = Parent.getPS1();
+
+			System.out.println("Creating subTask");
+			subTasks = new ProblemModule[workers.size()];
+			while(!allReady()){Thread.sleep(3000);}
+			System.out.println("Problem Servicer says: All subtaks ready");
+			for(int i=0; i<subTasks.length;i++){
+				subTasks[i] = workers.get(i).retrieveTask();
+				//subTasks[i] = Parent.getPS1().get(i).retrieveTask();
 			}
-		 }
-		 for(int i=0; i<subTasks.length;i++){
-			 subTasks[i] = workers.get(i).retrieveTask();
-		 }
-		 Task.finalize(subTasks);
-		 C.completeTask(Task);
-		 System.out.println("TaskCompleted");
-	 	}
+			Task.finalize(subTasks);
+			C.completeTask(Task);
+			System.out.println("TaskCompleted");
+		}
+		catch (InterruptedException e) {e.printStackTrace();}
+		catch (IOException e1) {e1.printStackTrace();}
 	}
+}
 
-	public void killThread(){
-		this.running = false;
-	}
+public void killThread(){
+	this.running = false;
+}
 
-	public boolean isRunning() {
-		return running;
-	}
+public boolean isRunning() {
+	return running;
+}
 
-	public void setRunning(boolean running) {
-		this.running = running;
-	}
+public void setRunning(boolean running) {
+	this.running = running;
+}
 }

@@ -21,7 +21,7 @@ public class TestNode implements MVP.Node.NodeType {
 	private static DataInputStream DataIn;
 	private static ObjectInputStream obIn;
 	private static boolean Ready = true;
-	private static int Status;
+	private static int Status =1;
 	static ExecutorService Solver = Executors.newFixedThreadPool(8);
 	ProblemModule Task;
 	Object recv;
@@ -34,30 +34,30 @@ public class TestNode implements MVP.Node.NodeType {
 
 	public TestNode(String host, int port) throws UnknownHostException, IOException {
 		Node = new Socket(InetAddress.getByName(host),port);
-		System.out.println("NodeSays: Connected setting up streams");
+	//	System.out.println("NodeSays: Connected setting up streams");
 		DataOut = new DataOutputStream(Node.getOutputStream());
 		obOut = new ObjectOutputStream(DataOut);
 		DataIn = new DataInputStream(Node.getInputStream());
 		obIn = new ObjectInputStream(DataIn);
-		System.out.println("NodeSays: Streams setup");
+	//	System.out.println("NodeSays: Streams setup");
 	}
 	
 	@Override
 	public void startNode(){
 		Solver.submit(this);
 		Status = 1;
-		System.out.println("Noderunninig");
+		//System.out.println("Noderunninig");
 	}
 
 	@Override
 	public void run() {
 		try{
-			System.out.println("Noderunninig");
+			//System.out.println("Noderunninig");
 			rec = null;
 			Future<ProblemModule> PM = null;
 			rec = Solver.submit(new InputService(obIn));
 			while(Ready){
-				System.out.println("Noderunninig");
+			//	System.out.println("Noderunninig");
 				if(rec.isCancelled()){
 					rec = Solver.submit(new InputService(obIn));
 				}
@@ -84,6 +84,7 @@ public class TestNode implements MVP.Node.NodeType {
 					Thread.sleep(3000);
 				}
 			}
+			System.out.println("Node Says: Node Closing");
 			obOut.writeObject(new Status(Status));
 			Node.close();
 		}
