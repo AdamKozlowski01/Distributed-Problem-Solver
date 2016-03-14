@@ -95,7 +95,7 @@ public class FileStringSearch implements ProblemModule {
 			String s = searchSpace.get(i);
 			Integer searchResult = s.indexOf(targetString);
 			if(searchResult >= 0) {
-				lineNumber += i;
+				lineNumber++;
 				targetFound = true;
 				break;
 			}
