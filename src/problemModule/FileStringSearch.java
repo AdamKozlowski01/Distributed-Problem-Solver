@@ -118,7 +118,7 @@ public class FileStringSearch implements ProblemModule {
 		}
 		
 		if(targetFound) {
-			System.out.println("String \"" + targetString + "\" found on line: " + lineNumber);
+			System.out.println("String \"" + targetString + "\" found on line: " + lineFound);
 		}
 		else {
 			System.out.println("String not found in file: " + fileName);
