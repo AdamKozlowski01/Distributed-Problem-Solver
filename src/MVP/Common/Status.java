@@ -7,6 +7,7 @@ public class Status implements Packets {
 	 */
 	private static final long serialVersionUID = 1L;
 	private int Status;
+	//TODO: you can also add a ID field here and add the methods to get/set id.
 	
 	public Status(int stat){
 		Status = stat;

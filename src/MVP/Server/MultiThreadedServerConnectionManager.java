@@ -5,7 +5,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -33,7 +32,7 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 	ClientListener CL;
 	NodeListener NL;
 	ProblemServicer PS;
-	private static ArrayList<Node> PS1 = new ArrayList<Node>();
+//	private static ArrayList<Node> PS1 = new ArrayList<Node>();
 	private static ConcurrentHashMap<ProblemModule,Client> Clients = new ConcurrentHashMap<ProblemModule,Client>();
 	private static ConcurrentHashMap<Integer,Node> Nodes = new ConcurrentHashMap<Integer,Node>();
 	private static final BlockingQueue<ProblemModule> Tasks = new LinkedBlockingQueue<ProblemModule>(); 
@@ -113,7 +112,7 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 			System.out.println( "Sending to socket " + ScheduledNodes.get(i).getSocket());
 		}
 		System.out.println("ServerSays: Scheduling Nodes Complete");
-		PS1.addAll(ScheduledNodes);
+		//PS1.addAll(ScheduledNodes);
 		//System.out.println("PS1 socket = " + PS1.get(0).getSocket());
 		return ScheduledNodes;
 	}

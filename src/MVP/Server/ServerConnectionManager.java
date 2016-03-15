@@ -2,6 +2,9 @@ package MVP.Server;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import problemModule.ProblemModule;
 
 //ServerConnectionManager
 public interface ServerConnectionManager {
@@ -13,7 +16,7 @@ public interface ServerConnectionManager {
 	void setCPort(int P);
 
 	void setNPort(int P);
-	
+
 
 	
 }
