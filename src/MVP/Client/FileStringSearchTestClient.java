@@ -6,7 +6,6 @@ import java.net.UnknownHostException;
 import MVP.problemModule.FileStringSearch;
 import MVP.problemModule.ProblemModule;
 
-//Still only for matrix addition but way easier to run JUnit Tests with for testing different configurations.
 public class FileStringSearchTestClient {
 	
 	private static String fileName;
