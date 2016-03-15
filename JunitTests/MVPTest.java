@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
+import MVP.Client.FileStringSearchTestClient;
 import MVP.Client.ModularTestClient;
 import MVP.Node.NodeType;
 import MVP.Node.TestNode;
@@ -33,20 +34,20 @@ public class MVPTest {
 	
 	@Test
 	public void test2() throws UnknownHostException, IOException, ClassNotFoundException, InterruptedException{
-	ExecutorService Service = Executors.newFixedThreadPool(8);
-	GridServer Serv = new GridServer(9090,9091);
-	Serv.setStartingProblemThreads(1);
-	Serv.Start();
-	NodeType n1 = new TestNode(null, 9091);
-	Service.execute(n1);
-	Thread.sleep(1000);//this is because I need to fix a bug in the connection logic. I know the bug and the fix.
-	NodeType n2 = new TestNode(null, 9091);
-	Service.execute(n2);
-	ModularTestClient MTC = new ModularTestClient();
-	MTC.startWithDefaults(null, 9090, 2, 3);
-	assertTrue(MTC.getSuccess());
-	Serv.Shutdown();
-	Thread.sleep(4000);
+		ExecutorService Service = Executors.newFixedThreadPool(8);
+		GridServer Serv = new GridServer(9090,9091);
+		Serv.setStartingProblemThreads(1);
+		Serv.Start();
+		NodeType n1 = new TestNode(null, 9091);
+		Service.execute(n1);
+		Thread.sleep(1000);//this is because I need to fix a bug in the connection logic. I know the bug and the fix.
+		NodeType n2 = new TestNode(null, 9091);
+		Service.execute(n2);
+		ModularTestClient MTC = new ModularTestClient();
+		MTC.startWithDefaults(null, 9090, 2, 3);
+		assertTrue(MTC.getSuccess());
+		Serv.Shutdown();
+		Thread.sleep(4000);
 	}
 
 	@Test
@@ -70,5 +71,28 @@ public class MVPTest {
 		ModularTestClient MTC = new ModularTestClient();
 		MTC.startWithDefaults(null, 9090, 2, 3);
 		assertTrue(MTC.getSuccess());
+	}
+	
+	@Test
+	public void fileStringSearch() throws IOException, InterruptedException, ClassNotFoundException{
+		ExecutorService Service = Executors.newFixedThreadPool(8);
+		GridServer Serv = new GridServer(9090,9091);
+		Serv.setStartingProblemThreads(1);
+		Serv.Start();
+		NodeType n1 = new TestNode(null, 9091);
+		Service.execute(n1);
+		Thread.sleep(1000);//this is because I need to fix a bug in the connection logic. I know the bug and the fix.
+		NodeType n2 = new TestNode(null, 9091);
+		Service.execute(n2);
+		Thread.sleep(1000);
+		NodeType n3 = new TestNode(null,9091);
+		Service.execute(n3);
+		Thread.sleep(1000);
+		NodeType n4 = new TestNode(null,9091);
+		Service.execute(n4);
+		Thread.sleep(1000);
+		FileStringSearchTestClient FSSTC = new FileStringSearchTestClient();
+		FSSTC.startWithDefaults(null, 9090, "test.txt", "Professor Michael S. Hart is the originator");
+		assertTrue(FSSTC.getSuccess());
 	}
 }
