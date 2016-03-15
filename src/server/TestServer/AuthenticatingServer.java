@@ -92,9 +92,9 @@ public class AuthenticatingServer {
 	
 	public void distributeWork() throws IOException{
 		//check if there are enough nodes to solve a problem. Minimum 2.
-		if(problemModulesToSolve.size() > 0){
+		if(problemModulesToSolve.size() > 0 && nodeInfo.size() > 0){
 			ProblemModule work = problemModulesToSolve.remove(0);
-			ProblemModule[] breakdown = work.breakDown(10); //change to the total number of available nodes
+			ProblemModule[] breakdown = work.breakDown(1); //change to the total number of available nodes
 			for(ProblemModule m : breakdown){
 				problemModuleBrokenDown.add(m);
 				//send the work to individual nodes
@@ -103,6 +103,7 @@ public class AuthenticatingServer {
 					Map.Entry pair = (Map.Entry)it.next();
 					if((boolean) pair.getValue() && !nodeWorkStatus.get(pair.getKey())){
 						//send work
+						//objectOut = pair.getValue()
 						objectOut.writeObject(m);
 						nodeWorkStatus.replace((Long) pair.getKey(), true);
 						nodeInfo.get(pair.getKey()).close();
@@ -231,18 +232,14 @@ class HandleNodeConnection implements Runnable{
 				//handle a new node joining the network
 				System.out.println("New node connected, uniqueID " + handleNewNode(node) + " assigned");
 				//keep alive
-				}else if( s.nodeWorkStatus.get(nodeID) != null && s.nodeWorkStatus.get(nodeID) ){ //check if we have a pending job for them
+			}else if( s.nodeWorkStatus.get(nodeID) != null && s.nodeWorkStatus.get(nodeID) ){ //check if we have a pending job for them
 				//handle getting a job back solved
 				System.out.println("Getting solution back from: " + handleAnswerReturned(nodeID));
 			}else{
 				//handle an already ID'd client be available for work
-				if(s.nodeConnectionStatus.get(nodeID) != null && !s.nodeConnectionStatus.get(nodeID)){
+				if(s.nodeConnectionStatus.get(nodeID) != null)
 					System.out.println("New node connected: "+handleNodeReconnect(node, nodeID));
 					//keep alive
-				}else{ //or remove that client from the list of available clients
-					System.out.println("Node disconnecting: "+handleNodeDisconnect(nodeID));
-				}
-	
 			}
 		}catch(Exception e){
 			
