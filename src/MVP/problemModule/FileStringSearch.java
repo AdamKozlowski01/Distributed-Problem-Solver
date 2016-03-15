@@ -20,10 +20,12 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 	private boolean targetFound;
 	private boolean Result;
 	
-	public FileStringSearch(String file, String target) {
+	public FileStringSearch(String file, String target) throws IOException {
 		id = 0;
 		fileName = file;
+		lineNumber = 1;
 		targetString = target; 
+		searchSpace = Files.readAllLines(Paths.get(fileName), Charset.defaultCharset());
 		targetFound = false;
 	}
 	
@@ -40,45 +42,40 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 		ProblemModule[] distributed = null;
 		
 		if(nodes > 0) {
-			try {
-				searchSpace = Files.readAllLines(Paths.get(fileName), Charset.defaultCharset());
-				Integer length = searchSpace.size();
-				Integer divisionLength = (int)(((double)length / nodes) + 0.5);
-				Integer fromIndex = 0;
-				Integer toIndex = divisionLength;
-				Integer lineCounter = 0;
-				
-				if(nodes > length) {
+			Integer length = searchSpace.size();
+			Integer divisionLength = (int)(((double)length / nodes) + 0.5);
+			Integer fromIndex = 0;
+			Integer toIndex = divisionLength;
+			Integer lineCounter = 0;
+			
+			if(nodes > length) {
+				distributed = new FileStringSearch[length];
+				toIndex = 1;
+				divisionLength = 1;
+			}
+			else {
+				if(divisionLength == 1) {
 					distributed = new FileStringSearch[length];
-					toIndex = 1;
-					divisionLength = 1;
 				}
 				else {
-					if(divisionLength == 1) {
-						distributed = new FileStringSearch[length];
-					}
-					else {
-						distributed = new FileStringSearch[(int)(((double)length / divisionLength) + 0.5)];
+					distributed = new FileStringSearch[(int)(((double)length / divisionLength) + 0.5)];
+				}
+			}
+			
+			for(int  i = 0; i < distributed.length; i++) {
+				if((i + 1) == distributed.length) {
+					if(lineCounter < length) {
+						List<String> temp2 = new ArrayList<String>(searchSpace.subList(fromIndex, length));
+						distributed[i] = new FileStringSearch(temp2, targetString, fromIndex, i + 1);
 					}
 				}
-				
-				for(int  i = 0; i < distributed.length; i++) {
-					if((i + 1) == distributed.length) {
-						if(lineCounter < length) {
-							List<String> temp2 = new ArrayList<String>(searchSpace.subList(fromIndex, length));
-							distributed[i] = new FileStringSearch(temp2, targetString, fromIndex, i + 1);
-						}
-					}
-					else {
-						List<String> temp = new ArrayList<String>(searchSpace.subList(fromIndex, toIndex));
-						distributed[i] = new FileStringSearch(temp, targetString, fromIndex, i + 1);
-						lineCounter += divisionLength;
-						fromIndex = toIndex;
-						toIndex += divisionLength;
-					}
+				else {
+					List<String> temp = new ArrayList<String>(searchSpace.subList(fromIndex, toIndex));
+					distributed[i] = new FileStringSearch(temp, targetString, fromIndex, i + 1);
+					lineCounter += divisionLength;
+					fromIndex = toIndex;
+					toIndex += divisionLength;
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
 		
@@ -93,10 +90,10 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 			String s = searchSpace.get(i);
 			Integer searchResult = s.indexOf(targetString);
 			if(searchResult >= 0) {
-				lineNumber++;
 				targetFound = true;
 				break;
 			}
+			lineNumber++;
 		}
 	}
 
@@ -161,7 +158,6 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 
 	@Override
 	public Object TestSolver() {
-		System.out.println("Starting solver, id = " + id);
 		String testResult = "String not found in file: " + fileName;
 		int length = searchSpace.size();
 		
@@ -169,10 +165,11 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 			String s = searchSpace.get(i);
 			Integer searchResult = s.indexOf(targetString);
 			if(searchResult >= 0) {
-				lineNumber++;
 				targetFound = true;
+				testResult = "String \"" + targetString + "\" found on line: " + lineNumber;
 				break;
 			}
+			lineNumber++;
 		}
 		
 		return testResult;
@@ -181,9 +178,7 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 	@Override
 	public boolean TEQ(Object TestResult) {
 		if(TestResult instanceof String){
-			System.out.println((String) TestResult);
-			System.out.println("String \"" + targetString + "\" found on line: " + lineNumber);
-			return ((String) TestResult).equals("String \"" + targetString + "\" found on line: " + lineNumber);
+			return ((String) TestResult).equals((String) this.TestSolver());
 			}
 			return false;
 	}

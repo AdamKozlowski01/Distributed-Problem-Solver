@@ -52,7 +52,7 @@ public class FileStringSearchTestClient {
 		CCM.writeObject(tosend);
 		recv = CCM.waitForResult();
 		System.out.println("Client Recieved result");
-		//computeTestResult();
+		computeTestResult();
 		TEQ();
 	}
 
@@ -64,7 +64,8 @@ public class FileStringSearchTestClient {
 	public ProblemModule getProblemModule(){return tosend;}
 	public String getTestResult(){
 		TestResult = "";
-		TestResult = (String)tosend.TestSolver(); 
+		TestResult = (String) tosend.TestSolver(); 
+		
 		return TestResult;
 	}
 
@@ -77,18 +78,14 @@ public class FileStringSearchTestClient {
 	//Utility
 	public void computeTestResult(){
 		TestResult = "";
-		TestResult = (String)tosend.TestSolver(); 
-	}
-
-	public void packProblemModule(){
-		tosend = new FileStringSearch(fileName, targetString);
+		TestResult = (String)((FileStringSearch)tosend).TestSolver();
 	}
 
 	public boolean TEQ(){
 		if(recv instanceof ProblemModule){
-			String TestResult = "String \"" + targetString + "\" found on line: 54280";
 			if(((ProblemModule) recv).TEQ((Object)TestResult)){
 				Success = true;
+				System.out.println(TestResult);
 				return true;
 			}else{
 				Success = false;

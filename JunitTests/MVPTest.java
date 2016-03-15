@@ -74,7 +74,7 @@ public class MVPTest {
 	}
 	
 	@Test
-	public void fileStringSearch() throws IOException, InterruptedException, ClassNotFoundException{
+	public void fileStringSearchTest() throws IOException, InterruptedException, ClassNotFoundException{
 		ExecutorService Service = Executors.newFixedThreadPool(8);
 		GridServer Serv = new GridServer(9090,9091);
 		Serv.setStartingProblemThreads(1);
@@ -92,7 +92,7 @@ public class MVPTest {
 		Service.execute(n4);
 		Thread.sleep(1000);
 		FileStringSearchTestClient FSSTC = new FileStringSearchTestClient();
-		FSSTC.startWithDefaults(null, 9090, "test.txt", "START OF THIS PROJECT GUTENBERG EBOOK SUMMA THEOLOGICA");
+		FSSTC.startWithDefaults(null, 9090, "test.txt", "The truth of each thing is a property of the essence");
 		assertTrue(FSSTC.getSuccess());
 	}
 }
