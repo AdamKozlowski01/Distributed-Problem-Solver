@@ -52,7 +52,7 @@ public class FileStringSearchTestClient {
 		CCM.writeObject(tosend);
 		recv = CCM.waitForResult();
 		System.out.println("Client Recieved result");
-		computeTestResult();
+		//computeTestResult();
 		TEQ();
 	}
 

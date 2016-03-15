@@ -92,7 +92,7 @@ public class MVPTest {
 		Service.execute(n4);
 		Thread.sleep(1000);
 		FileStringSearchTestClient FSSTC = new FileStringSearchTestClient();
-		FSSTC.startWithDefaults(null, 9090, "test.txt", "Professor Michael S. Hart is the originator");
+		FSSTC.startWithDefaults(null, 9090, "test.txt", "START OF THIS PROJECT GUTENBERG EBOOK SUMMA THEOLOGICA");
 		assertTrue(FSSTC.getSuccess());
 	}
 }

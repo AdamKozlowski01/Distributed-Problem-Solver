@@ -161,6 +161,7 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 
 	@Override
 	public Object TestSolver() {
+		System.out.println("Starting solver, id = " + id);
 		String testResult = "String not found in file: " + fileName;
 		int length = searchSpace.size();
 		
@@ -180,7 +181,9 @@ public class FileStringSearch implements MVP.problemModule.ProblemModule {
 	@Override
 	public boolean TEQ(Object TestResult) {
 		if(TestResult instanceof String){
-			return TestResult.equals("String \"" + targetString + "\" found on line: " + lineNumber);
+			System.out.println((String) TestResult);
+			System.out.println("String \"" + targetString + "\" found on line: " + lineNumber);
+			return ((String) TestResult).equals("String \"" + targetString + "\" found on line: " + lineNumber);
 			}
 			return false;
 	}
