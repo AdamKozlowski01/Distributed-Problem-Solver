@@ -57,6 +57,10 @@ public class AuthenticatingServer {
 	public ConcurrentHashMap<Long, Boolean> nodeConnectionStatus;
 	public ConcurrentHashMap<Long, Boolean> nodeIDTaken;
 	public ConcurrentHashMap<Long, InetAddress> nodeAddress;
+	public ConcurrentHashMap<Long, ObjectOutputStream> objectToNode;
+	public ConcurrentHashMap<Long, DataOutputStream> dataToNode;
+	
+	private int numberOfAvailableNodes;
 	
 	//keep track of ProblemModule pieces
 	private ArrayList<ProblemModule> problemModulesToSolve;
@@ -66,6 +70,7 @@ public class AuthenticatingServer {
 	private static ServerSocket server;
 	private static int port;
 	private ObjectOutputStream objectOut;
+	private DataOutputStream output;
 	
 	public AuthenticatingServer(int port) throws IOException{
 		this.port = port;
@@ -93,6 +98,7 @@ public class AuthenticatingServer {
 	public void distributeWork() throws IOException{
 		//check if there are enough nodes to solve a problem. Minimum 2.
 		if(problemModulesToSolve.size() > 0 && nodeInfo.size() > 0){
+			System.out.println("Distributing Work");
 			ProblemModule work = problemModulesToSolve.remove(0);
 			ProblemModule[] breakdown = work.breakDown(1); //change to the total number of available nodes
 			for(ProblemModule m : breakdown){
@@ -104,6 +110,9 @@ public class AuthenticatingServer {
 					if((boolean) pair.getValue() && !nodeWorkStatus.get(pair.getKey())){
 						//send work
 						//objectOut = pair.getValue()
+						output = new DataOutputStream(nodeInfo.get(pair.getKey()).getOutputStream());
+						objectOut = new ObjectOutputStream(output);
+						objectOut.reset();
 						objectOut.writeObject(m);
 						nodeWorkStatus.replace((Long) pair.getKey(), true);
 						nodeInfo.get(pair.getKey()).close();
@@ -123,6 +132,9 @@ public class AuthenticatingServer {
 	}
 }
 
+
+//-----------------------------------------------------------------------------------------------
+/***********************************************************************************************/
 //-----------------------------------------------------------------------------------------------
 class HandleNodeConnection implements Runnable{
 
@@ -242,7 +254,7 @@ class HandleNodeConnection implements Runnable{
 					//keep alive
 			}
 		}catch(Exception e){
-			
+			e.printStackTrace();
 		}
 	}
 	
