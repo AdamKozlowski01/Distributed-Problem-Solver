@@ -7,17 +7,47 @@ import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
+import MVP.Client.FileStringSearchTestClient;
 //import MVP.Client.FileStringSearchTestClient;
 import MVP.Client.ModularTestClient;
+import MVP.Node.AuthNode;
 import MVP.Node.NodeType;
-import MVP.Node.TestNode;
+import MVP.Server.AuthenticatingServer;
 import MVP.Server.GridServer;
-import problemModule.FileStringSearch;
+import MVP.problemModule.FileStringSearch;
 
 
 
 public class MVPTest {
 	//minimum viable product tests.
+	@Test
+	public void authTest() throws IOException, ClassNotFoundException {
+		ExecutorService Service = Executors.newFixedThreadPool(8);
+		AuthenticatingServer server = new AuthenticatingServer(9090, 9091);
+		server.setStartingProblemThreads(1);
+		server.Start();
+		NodeType n1 = new AuthNode(null, 9091);
+		Service.execute(n1);
+		ModularTestClient MTC = new ModularTestClient();
+		MTC.startWithDefaults(null, 9090, 2, 3);
+		assertTrue(MTC.getSuccess());
+		server.Shutdown();
+	}
+	
+	/*@Test
+	public void authTestFileSearch() throws IOException, ClassNotFoundException {
+		ExecutorService Service = Executors.newFixedThreadPool(8);
+		AuthenticatingServer server = new AuthenticatingServer(9090, 9091);
+		server.setStartingProblemThreads(1);
+		server.Start();
+		NodeType n1 = new AuthNode(null, 9091);
+		Service.execute(n1);
+		FileStringSearchTestClient MTC = new FileStringSearchTestClient();
+		MTC.startWithDefaults(null, 9090, "test.txt", "The truth of each thing is a property of the essence");
+		assertTrue(MTC.getSuccess());
+		server.Shutdown();
+	}*/
+	
 	@Test
 	public void test1() throws UnknownHostException, ClassNotFoundException, IOException, InterruptedException {
 		ExecutorService Service = Executors.newFixedThreadPool(8);
