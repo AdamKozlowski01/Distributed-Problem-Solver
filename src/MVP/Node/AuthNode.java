@@ -79,6 +79,7 @@ public class AuthNode implements MVP.Node.NodeType {
 			System.out.println("Node : About to send ID packet");
 			obOut.writeObject(new IdentificationPacket(id));
 			if(id == -1){
+				Thread.sleep(1000);
 				recv = rec.get();
 				rec = Solver.submit(new AuthInputService(obIn));
 				if(recv instanceof IdentificationPacket){
@@ -127,9 +128,9 @@ public class AuthNode implements MVP.Node.NodeType {
 			obOut.writeObject(new IdentificationPacket(id));
 			Node.close();
 		}
-		catch (IOException e) {e.printStackTrace();}
-		catch (InterruptedException e) {e.printStackTrace();} 
-		catch (ExecutionException e) {e.printStackTrace();}	
+		catch (IOException e) {}
+		catch (InterruptedException e) {} 
+		catch (ExecutionException e) {}	
 	}
 	
 	public void reconnect() throws UnknownHostException, IOException{

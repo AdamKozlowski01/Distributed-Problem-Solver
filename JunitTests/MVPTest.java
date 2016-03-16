@@ -12,6 +12,7 @@ import MVP.Client.FileStringSearchTestClient;
 import MVP.Client.ModularTestClient;
 import MVP.Node.AuthNode;
 import MVP.Node.NodeType;
+import MVP.Node.TestNode;
 import MVP.Server.AuthenticatingServer;
 import MVP.Server.GridServer;
 import MVP.problemModule.FileStringSearch;
@@ -68,14 +69,14 @@ public class MVPTest {
 	@Test
 	public void test2() throws UnknownHostException, IOException, ClassNotFoundException, InterruptedException{
 		ExecutorService Service = Executors.newFixedThreadPool(8);
-		//GridServer Serv = new GridServer(9090,9091);
+		GridServer Serv = new GridServer(9090,9091);
 		//AuthenticatingServer Serv = new AuthenticatingServer(9090, 9091);
 		Serv.setStartingProblemThreads(1);
 		Serv.Start();
-		NodeType n1 = new AuthNode(null, 9091);
+		NodeType n1 = new TestNode(null, 9091);
 		Service.execute(n1);
 		Thread.sleep(1000);
-		NodeType n2 = new AuthNode(null, 9091);
+		NodeType n2 = new TestNode(null, 9091);
 		Service.execute(n2);
 		ModularTestClient MTC = new ModularTestClient();
 		MTC.startWithDefaults(null, 9090, 2, 3);
@@ -87,20 +88,20 @@ public class MVPTest {
 	@Test
 	public void test3() throws IOException, InterruptedException, ClassNotFoundException{
 		ExecutorService Service = Executors.newFixedThreadPool(8);
-		//GridServer Serv = new GridServer(9090,9091);
-		AuthenticatingServer Serv = new AuthenticatingServer(9090, 9091);
+		GridServer Serv = new GridServer(9090,9091);
+		//AuthenticatingServer Serv = new AuthenticatingServer(9090, 9091);
 		Serv.setStartingProblemThreads(1);
 		Serv.Start();
-		NodeType n1 = new AuthNode(null, 9091);
+		NodeType n1 = new TestNode(null, 9091);
 		Service.execute(n1);
 		Thread.sleep(1000);//this is because I need to fix a bug in the connection logic. I know the bug and the fix.
-		NodeType n2 = new AuthNode(null, 9091);
+		NodeType n2 = new TestNode(null, 9091);
 		Service.execute(n2);
 		Thread.sleep(1000);
-		NodeType n3 = new AuthNode(null,9091);
+		NodeType n3 = new TestNode(null,9091);
 		Service.execute(n3);
 		Thread.sleep(1000);
-		NodeType n4 = new AuthNode(null,9091);
+		NodeType n4 = new TestNode(null,9091);
 		Service.execute(n4);
 		Thread.sleep(1000);
 		ModularTestClient MTC = new ModularTestClient();
@@ -111,7 +112,7 @@ public class MVPTest {
 	}
 	
 	
-	/*
+	
 	@Test
 	public void fileStringSearchTest() throws IOException, InterruptedException, ClassNotFoundException{
 		ExecutorService Service = Executors.newFixedThreadPool(8);
@@ -130,11 +131,11 @@ public class MVPTest {
 		NodeType n4 = new TestNode(null,9091);
 		Service.execute(n4);
 		Thread.sleep(1000);
-		//FileStringSearch FSSTC = new FileStringSearch();
-		//FSSTC.startWithDefaults(null, 9090, "test.txt", "The truth of each thing is a property of the essence");
-		//ModularTestClient MTC = new ModularTestClient();
-		//assertTrue(MTC.getSuccess());
-		//assertTrue(FSSTC.getSuccess());
+		FileStringSearchTestClient FSSTC = new FileStringSearchTestClient();
+		FSSTC.startWithDefaults(null, 9090, "test.txt", "The truth of each thing is a property of the essence");
+		assertTrue(FSSTC.getSuccess());
+		Serv.Shutdown();
+		Thread.sleep(3000);
 	}
-	*/
+	
 }

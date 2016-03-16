@@ -32,7 +32,7 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 	ClientListener CL;
 	NodeListener NL;
 	ProblemServicer PS;
-//	private static ArrayList<Node> PS1 = new ArrayList<Node>();
+	//	private static ArrayList<Node> PS1 = new ArrayList<Node>();
 	private static ConcurrentHashMap<ProblemModule,Client> Clients = new ConcurrentHashMap<ProblemModule,Client>();
 	private static ConcurrentHashMap<Integer,Node> Nodes = new ConcurrentHashMap<Integer,Node>();
 	private static final BlockingQueue<ProblemModule> Tasks = new LinkedBlockingQueue<ProblemModule>(); 
@@ -90,15 +90,26 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 	}
 
 	//this is where the call to the filter strategy would go.
-	public synchronized ArrayList<Node> ScheduleNodes(ProblemModule task) throws IOException{
-		//System.out.println("ServerSays: SchedulingNodes");
+	public synchronized ArrayList<Node> ScheduleNodes(ProblemModule task) throws IOException, InterruptedException{
+		//System.out.println("ServerSays: SchedulingNodes")
 		ArrayList<Node> ReadyNodes = new ArrayList<Node>();
-		for(Integer i : getNodes().keySet()){
-			Node N = Nodes.get(i);
-			if(N.getStatus() == 1 && !N.isScheduled()){
-				//	System.out.println(N + " being added to readyNodes");
-				ReadyNodes.add(N);
-			}	 
+
+		int count =0;
+		//bad hack I am about to do.
+		while(ReadyNodes.size()==0){
+			if(count != 0){
+				Thread.sleep(3000);
+			}
+			for(Integer i : getNodes().keySet()){
+				Node N = Nodes.get(i);
+				if(N.getStatus() == 1 && !N.isScheduled()){
+					//	System.out.println(N + " being added to readyNodes");
+					if(!ReadyNodes.contains(N)){
+						ReadyNodes.add(N);
+					}	
+				}	 
+			}
+			count++;
 		}
 		ProblemModule[] subTasks = task.breakDown(ReadyNodes.size());
 		//System.out.println("number of ready nodes: " + ReadyNodes.size());
@@ -134,7 +145,7 @@ public class MultiThreadedServerConnectionManager implements MVP.Server.ServerCo
 		//System.out.println("Checking socket + " + n);
 		return Nodes.get(n).problemReady();
 	}*/
-	
+
 	public boolean getTaskReady(Node n){
 		return Nodes.get(n.getSocket().getLocalPort()).problemReady();
 	}
@@ -281,16 +292,16 @@ class Node implements Runnable{
 	private ProblemModule Task;
 	private Boolean TaskComplete,scheduled;
 
-	
+
 	@Override
 	public int hashCode(){
-		   int hashcode = 5;
-		   hashcode = 89*hashcode + (this.DataOut.hashCode());
-		   hashcode = 89*hashcode + (this.DataIn.hashCode());
-		   hashcode = 89*hashcode + (this.getSocket().hashCode());
-		   return hashcode;
+		int hashcode = 5;
+		hashcode = 89*hashcode + (this.DataOut.hashCode());
+		hashcode = 89*hashcode + (this.DataIn.hashCode());
+		hashcode = 89*hashcode + (this.getSocket().hashCode());
+		return hashcode;
 	}
-	
+
 	@Override
 	public boolean equals(Object obj){
 		if(this == obj) return true;
@@ -298,7 +309,7 @@ class Node implements Runnable{
 		if(this.getSocket() == ((Node) obj).getSocket());
 		return true;
 	}
-	
+
 	private void setupStreams() throws IOException{
 		DataOut = new DataOutputStream(Node.getOutputStream());
 		obOut = new ObjectOutputStream(DataOut);
@@ -396,7 +407,7 @@ class ProblemServicer implements Runnable{
 
 	private boolean allReady(){
 		for(int i=0; i<workers.size();i++){
-		//if(!Parent.getTaskReady(workers.get(i))){
+			//if(!Parent.getTaskReady(workers.get(i))){
 			if(!workers.get(i).problemReady()){
 				System.out.println("allReady says Node " + workers.get(i) + " not ready");
 				return false;
@@ -409,40 +420,40 @@ class ProblemServicer implements Runnable{
 	public void run() {
 		while(running){
 			try{
-			System.out.println("getting Task from queue");
-			C = Parent.getTaskfromQueue();
-			Task = C.getProblem();
-			workers = Parent.ScheduleNodes(Task);
+				System.out.println("getting Task from queue");
+				C = Parent.getTaskfromQueue();
+				Task = C.getProblem();
+				workers = Parent.ScheduleNodes(Task);
 
-			//Parent.ScheduleNodes(Task);
-			//workers = Parent.getPS1();
+				//Parent.ScheduleNodes(Task);
+				//workers = Parent.getPS1();
 
-			System.out.println("Creating subTask");
-			subTasks = new ProblemModule[workers.size()];
-			while(!allReady()){Thread.sleep(3000);}
-			System.out.println("Problem Servicer says: All subtaks ready");
-			for(int i=0; i<subTasks.length;i++){
-				subTasks[i] = workers.get(i).retrieveTask();
-				//subTasks[i] = Parent.getPS1().get(i).retrieveTask();
+				System.out.println("Creating subTask");
+				subTasks = new ProblemModule[workers.size()];
+				while(!allReady()){Thread.sleep(3000);}
+				System.out.println("Problem Servicer says: All subtaks ready");
+				for(int i=0; i<subTasks.length;i++){
+					subTasks[i] = workers.get(i).retrieveTask();
+					//subTasks[i] = Parent.getPS1().get(i).retrieveTask();
+				}
+				Task.finalize(subTasks);
+				C.completeTask(Task);
+				System.out.println("TaskCompleted");
 			}
-			Task.finalize(subTasks);
-			C.completeTask(Task);
-			System.out.println("TaskCompleted");
+			catch (InterruptedException e) {e.printStackTrace();}
+			catch (IOException e1) {e1.printStackTrace();}
 		}
-		catch (InterruptedException e) {e.printStackTrace();}
-		catch (IOException e1) {e1.printStackTrace();}
 	}
-}
 
-public void killThread(){
-	this.running = false;
-}
+	public void killThread(){
+		this.running = false;
+	}
 
-public boolean isRunning() {
-	return running;
-}
+	public boolean isRunning() {
+		return running;
+	}
 
-public void setRunning(boolean running) {
-	this.running = running;
-}
+	public void setRunning(boolean running) {
+		this.running = running;
+	}
 }
