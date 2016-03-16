@@ -100,7 +100,12 @@ public class AuthNode implements MVP.Node.NodeType {
 			rec = null;
 			Future<ProblemModule> PM = null;
 			rec = Solver.submit(new InputService(obIn));
+			DataOut.close();
+			obOut.close();
+			DataIn.close();
+			obIn.close();
 			Node.close();
+			
 			//disconnect from server to avoid keep alive packets
 			System.out.println("Node Says: Node Closing");
 			while(Ready){
