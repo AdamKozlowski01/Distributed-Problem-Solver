@@ -1,0 +1,166 @@
+package MVP.Node;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import MVP.Common.Status;
+import MVP.problemModule.ProblemModule;
+
+public class AuthNode implements MVP.Node.NodeType {
+
+	private static Socket Node;
+	private static DataOutputStream DataOut;
+	private static ObjectOutputStream obOut;
+	private static DataInputStream DataIn;
+	private static ObjectInputStream obIn;
+	private static boolean Ready = true;
+	private static int Status =1;
+	static ExecutorService Solver = Executors.newFixedThreadPool(8);
+	ProblemModule Task;
+	Object recv;
+	Future<Object> rec = null;
+	private String hostName;
+	private int portNo; 
+	private long idNo;
+	private String idNoString;
+	public void Shutdown(){
+		Status = 0;
+		Ready = false;
+	}
+
+	public AuthNode(String host, int port) throws UnknownHostException, IOException {
+		Node = new Socket(InetAddress.getByName(host),port);
+		hostName=host;
+		portNo=port;
+	//	System.out.println("NodeSays: Connected setting up streams");
+		
+		
+		File file= new File("id.txt");
+		String id=null;
+		
+		if (file.exists() && file.canRead() ) {
+			BufferedReader input = new BufferedReader(new FileReader(file));
+			id=input.readLine();
+			DataOut.writeUTF(id);
+			idNoString= id;
+			//sending ID
+			//output.println( "Found...transmitting contents..." );			
+		}
+		else
+		{
+			DataOut.writeUTF("-1");
+			//sends -1 if not found
+			idNo= DataIn.readLong();
+			FileWriter writer = new FileWriter(file);
+			idNoString = idNo+"";
+			//convert long to string
+			writer.write(idNoString);
+			writer.close();
+			//write to file for future reference
+
+
+		}
+
+		
+		DataOut = new DataOutputStream(Node.getOutputStream());
+		obOut = new ObjectOutputStream(DataOut);
+		DataIn = new DataInputStream(Node.getInputStream());
+		obIn = new ObjectInputStream(DataIn);
+	//	System.out.println("NodeSays: Streams setup");
+		
+		
+	}
+	
+	@Override
+	public void startNode(){
+		Solver.submit(this);
+		Status = 1;
+		//System.out.println("Noderunning");
+	}
+
+	@Override
+	public void run() {
+		try{
+			//System.out.println("Noderunning");
+			rec = null;
+			Future<ProblemModule> PM = null;
+			rec = Solver.submit(new InputService(obIn));
+			DataOut.close();
+			obOut.close();
+			DataIn.close();
+			obIn.close();
+			Node.close();
+			
+			//disconnect from server to avoid keep alive packets
+			System.out.println("Node Says: Node Closing");
+			while(Ready){
+			//	System.out.println("Noderunning");
+				if(rec.isCancelled()){
+					rec = Solver.submit(new InputService(obIn));
+				}
+				if(rec.isDone()){
+					recv = rec.get();
+					rec = Solver.submit(new InputService(obIn));
+					if(recv instanceof ProblemModule){
+						System.out.println("Node Says: Problem Received");
+						Task = (ProblemModule) recv;
+						recv = null;
+						Status = -1;
+						PM = Solver.submit((new SolverService(Task)));
+					} 
+				}else{
+					if(PM != null){
+						if(PM.isDone()){
+							Node = new Socket(InetAddress.getByName(hostName),portNo);
+							DataOut = new DataOutputStream(Node.getOutputStream());
+							obOut = new ObjectOutputStream(DataOut);
+							DataIn = new DataInputStream(Node.getInputStream());
+							obIn = new ObjectInputStream(DataIn);
+							
+							DataOut.writeUTF(idNoString);
+							//need to reauthenticate
+							
+							obOut.writeObject(PM.get());	
+							//re establish connection to server
+							System.out.println("Node Says: problem sent");
+							PM=null;
+							Status=1;
+						}
+					}
+					//obOut.writeObject(new Status(Status));
+					Thread.sleep(3000);
+				}
+			}
+			//reestablish our input and outputstreams after reconnecting
+			Node = new Socket(InetAddress.getByName(hostName),portNo);
+			DataOut = new DataOutputStream(Node.getOutputStream());
+			obOut = new ObjectOutputStream(DataOut);
+			DataIn = new DataInputStream(Node.getInputStream());
+			obIn = new ObjectInputStream(DataIn);
+			
+			DataOut.writeUTF(idNoString);
+			//need to reauthenticate
+			
+			obOut.writeObject(new Status(Status));
+			
+		}
+		catch (IOException e) {e.printStackTrace();}
+		catch (InterruptedException e) {e.printStackTrace();} 
+		catch (ExecutionException e) {e.printStackTrace();}	
+	}
+}

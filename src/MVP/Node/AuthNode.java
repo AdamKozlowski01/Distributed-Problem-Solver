@@ -47,15 +47,18 @@ public class AuthNode implements MVP.Node.NodeType {
 		obIn = new ObjectInputStream(DataIn);
 	//	System.out.println("NodeSays: Streams setup");
 		
+		
+		this.id = -1;
 		idFile= new File("id.txt");
 		String idFromFile=null;
 		
-		if (idFile.exists() && idFile.canRead() ) {
+		/*if (idFile.exists() && idFile.canRead() ) {
 			BufferedReader input = new BufferedReader(new FileReader(idFile));
 			idFromFile=input.readLine();
 			this.id = Long.parseLong(idFromFile);		
-		}else{
-			this.id = -1;}
+		}else{*/
+			this.id = -1;
+			//}		
 	}
 	
 	@Override
@@ -68,17 +71,16 @@ public class AuthNode implements MVP.Node.NodeType {
 	@Override
 	public void run() {
 		try{
-		
 			//System.out.println("Noderunninig");
 			rec = null;
 			Future<ProblemModule> PM = null;
-			rec = Solver.submit(new InputService(obIn));
+			rec = Solver.submit(new AuthInputService(obIn));
 			//send the idPacket
 			System.out.println("Node : About to send ID packet");
 			obOut.writeObject(new IdentificationPacket(id));
 			if(id == -1){
 				recv = rec.get();
-				rec = Solver.submit(new InputService(obIn));
+				rec = Solver.submit(new AuthInputService(obIn));
 				if(recv instanceof IdentificationPacket){
 					id = ((IdentificationPacket)recv).getID();
 					//write it to file for later use
@@ -92,17 +94,17 @@ public class AuthNode implements MVP.Node.NodeType {
 			while(Ready){
 			//	System.out.println("Noderunninig");
 				if(rec.isCancelled()){
-					rec = Solver.submit(new InputService(obIn));
+					rec = Solver.submit(new AuthInputService(obIn));
 				}
 				if(rec.isDone() && !Node.isClosed()){
 					recv = rec.get();
-					rec = Solver.submit(new InputService(obIn));
+					rec = Solver.submit(new AuthInputService(obIn));
 					if(recv instanceof ProblemModule){
 						System.out.println("Node Says: Problem Received");
 						Task = (ProblemModule) recv;
 						recv = null;
 						Status = -1;
-						PM = Solver.submit((new SolverService(Task)));
+						PM = Solver.submit((new AuthSolverService(Task)));
 						//we recieved the task now shut down the connection
 						obOut.writeObject(new IdentificationPacket(id));
 						Node.close();
@@ -141,11 +143,11 @@ public class AuthNode implements MVP.Node.NodeType {
 	}
 }
 
-class InputService implements Callable<Object>{
+class AuthInputService implements Callable<Object>{
 
 	ObjectInputStream ObIn;
 	Object recv;
-	public InputService(ObjectInputStream obIn){
+	public AuthInputService(ObjectInputStream obIn){
 		ObIn = obIn;
 	}
 
@@ -159,10 +161,10 @@ class InputService implements Callable<Object>{
 	}
 }
 
-class SolverService implements Callable<ProblemModule>{
+class AuthSolverService implements Callable<ProblemModule>{
 
 	ProblemModule PM;
-	SolverService(ProblemModule pm){
+	AuthSolverService(ProblemModule pm){
 		PM = pm;
 	}
 

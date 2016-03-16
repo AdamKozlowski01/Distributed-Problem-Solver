@@ -57,22 +57,22 @@ public class AuthenticatingConnectionManager implements ServerConnectionManager 
 
 	//TODO:Choose one of the two executor services and stick with it
 	private static ExecutorService MTSE = Executors.newFixedThreadPool(40);
-	
+
 	//TODO: I changed the signatures on the hashmaps already, and the support classes at the end of the file.
 	int CPort,NPort,PThreads;
 	AuthClientListener CL;
 	AuthNodeListener NL;
 	AuthProblemServicer PS;
-	
+
 	private static ArrayList<Long> idsTaken = new ArrayList<Long>();
 	private static ConcurrentHashMap<ProblemModule,AuthClient> Clients = new ConcurrentHashMap<ProblemModule,AuthClient>();
 	private static ConcurrentHashMap<Long,AuthNode> Nodes = new ConcurrentHashMap<Long,AuthNode>();
 	private static final BlockingQueue<ProblemModule> Tasks = new LinkedBlockingQueue<ProblemModule>(); 
 
 	private ConcurrentHashMap<Long, Boolean> Working = new ConcurrentHashMap<Long, Boolean>();
-	
+
 	private Random rngesus;
-	
+
 	@Override
 	public void StartServer() throws IOException {
 		CL = new AuthClientListener(CPort,this);
@@ -83,18 +83,18 @@ public class AuthenticatingConnectionManager implements ServerConnectionManager 
 		MTSE.execute(PS);
 		rngesus = new Random();
 	}
-	
+
 	public AuthenticatingConnectionManager(int cPort, int nPort,int pThreads) {
 		CPort = cPort;
 		NPort = nPort;
 		PThreads = pThreads;
-		
+
 	}
-	
+
 	public boolean isNodeWorking(long id){
 		return Working.get(id);
 	}
-	
+
 	public long generateNewID(){
 		long nextID = rngesus.nextLong();
 		while(nextID == -1 || idsTaken.contains(nextID)){
@@ -102,7 +102,7 @@ public class AuthenticatingConnectionManager implements ServerConnectionManager 
 		}
 		idsTaken.add(nextID);
 		return nextID;
-		
+
 	}
 
 	@Override
@@ -128,9 +128,15 @@ public class AuthenticatingConnectionManager implements ServerConnectionManager 
 		return Clients.get(Task);
 	}
 
-	public synchronized ArrayList<AuthNode> ScheduleNodes(ProblemModule task) throws IOException {
-			//System.out.println("ServerSays: SchedulingNodes");
-			ArrayList<AuthNode> ReadyNodes = new ArrayList<AuthNode>();
+	public synchronized ArrayList<AuthNode> ScheduleNodes(ProblemModule task) throws IOException, InterruptedException {
+		//System.out.println("ServerSays: SchedulingNodes");
+		ArrayList<AuthNode> ReadyNodes = new ArrayList<AuthNode>();
+		int count =0;
+		//bad hack I am about to do.
+		while(ReadyNodes.size()==0){
+			if(count != 0){
+				Thread.sleep(3000);
+			}
 			for(Long i : getNodes().keySet()){
 				AuthNode N = Nodes.get(i);
 				if(N.getStatus() == 1 && !N.isScheduled()){
@@ -138,39 +144,46 @@ public class AuthenticatingConnectionManager implements ServerConnectionManager 
 					ReadyNodes.add(N);
 				}	 
 			}
-			ProblemModule[] subTasks = task.breakDown(ReadyNodes.size());
-			//System.out.println("number of ready nodes: " + ReadyNodes.size());
-			ArrayList<AuthNode> ScheduledNodes = new ArrayList<AuthNode>();
-			for(int i = 0; i<subTasks.length; i++){
-				AuthNode n = null;
-				if(i < ReadyNodes.size())
-					n = ReadyNodes.get(i);
-				else
-					break;
-				System.out.println("node " + n.getID() + " added to scheduled nodes");
-				n.setScheduled(true);
-				this.Working.replace(n.getID(), true);
-				n.sendTask(subTasks[i]);
-				ScheduledNodes.add(n);
-				System.out.println( "Sending to Node " + ScheduledNodes.get(i).getID());
-			}
-			System.out.println("ServerSays: Scheduling Nodes Complete");
-			//PS1.addAll(ScheduledNodes);
-			//System.out.println("PS1 socket = " + PS1.get(0).getSocket());
-			return ScheduledNodes;
+			count++;
+		}
+
+
+
+
+
+		ProblemModule[] subTasks = task.breakDown(ReadyNodes.size());
+		//System.out.println("number of ready nodes: " + ReadyNodes.size());
+		ArrayList<AuthNode> ScheduledNodes = new ArrayList<AuthNode>();
+		for(int i = 0; i<subTasks.length; i++){
+			AuthNode n = null;
+			if(i < ReadyNodes.size())
+				n = ReadyNodes.get(i);
+			else
+				break;
+			System.out.println("node " + n.getID() + " added to scheduled nodes");
+			n.setScheduled(true);
+			this.Working.replace(n.getID(), true);
+			n.sendTask(subTasks[i]);
+			ScheduledNodes.add(n);
+			System.out.println( "Sending to Node " + ScheduledNodes.get(i).getID());
+		}
+		System.out.println("ServerSays: Scheduling Nodes Complete");
+		//PS1.addAll(ScheduledNodes);
+		//System.out.println("PS1 socket = " + PS1.get(0).getSocket());
+		return ScheduledNodes;
 	}
 
 	public void addNode(AuthNode authNode, long id) {
 		//System.out.println("adding Node " + authNode.getSocket());
 		getNodes().put(id,authNode);
 		//Nodes.add(n);
-		
+
 	}
-	
+
 	public void addNodeToWorkers(long id){
 		Working.put(id, false);
 	}
-	
+
 	public ConcurrentHashMap<Long, AuthNode> getNodes() {return Nodes;}
 
 	public void addClient(AuthClient c) {
@@ -182,18 +195,18 @@ public class AuthenticatingConnectionManager implements ServerConnectionManager 
 		MTSE.execute(R);
 	}
 
-	
+
 	public void removeNode(long id) {
 		Nodes.remove(id);
 	}
 	public boolean hasWorkOut(long id){
 		return Working.get(id);
 	}
-	
+
 	public boolean idAssigned(long id){
 		return idsTaken.contains(id);
 	}
-	
+
 	public void setWorkerStatus(long id, boolean status){
 		Working.replace(id, status);
 	}
@@ -416,7 +429,7 @@ class AuthNode implements Runnable{
 							TaskComplete = true;
 							System.out.println("PM returned from node " + this.id);
 							Parent.PS.collect(this);
-							
+
 						}else{
 							System.out.println("Recieved a PM from Node " + id + " when Node did not have work out.");
 						}
@@ -431,7 +444,7 @@ class AuthNode implements Runnable{
 							System.out.println("Node " + id + " disconnected");
 							Parent.removeNode(id);
 							Node.close();
-															
+
 						}
 					}
 				}
@@ -450,7 +463,7 @@ class AuthNode implements Runnable{
 	public boolean isScheduled() {return scheduled;}
 
 	public void setScheduled(boolean scheduled) {this.scheduled = scheduled;}
-	
+
 	public long getID(){
 		return id;
 	}
@@ -468,7 +481,7 @@ class AuthProblemServicer implements Runnable{
 	private int subTaskIndex;
 	private int numberOfProblems;
 
-	
+
 	public void collect(AuthNode n){
 		subTasks[subTaskIndex] = n.retrieveTask();
 		if(subTaskIndex == numberOfProblems){
@@ -512,11 +525,11 @@ class AuthProblemServicer implements Runnable{
 				//while(!allReady()){Thread.sleep(3000);}
 				System.out.println("Problem Servicer says: All subtaks ready");
 				//ArrayList<Long> workerIDs = new ArrayList<Long>();
-				
+
 				/*for(AuthNode n : workers){
 					workerIDs.add(n.getID());
 				}
-			
+
 				if(index == numberOfProblems){
 					Task.finalize(subTasks);
 					C.completeTask(Task);
@@ -524,7 +537,7 @@ class AuthProblemServicer implements Runnable{
 				}*/
 			}
 			catch (Exception e) {e.printStackTrace();}
-		//	catch (IOException e1) {e1.printStackTrace();}
+			//	catch (IOException e1) {e1.printStackTrace();}
 		}
 	}
 
